@@ -1,5 +1,90 @@
 basePath: /
 definitions:
+  book.BookDTO:
+    properties:
+      author:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      isbn:
+        type: string
+      pages:
+        type: integer
+      published_year:
+        type: integer
+      publisher:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  book.BookResponse:
+    properties:
+      data:
+        $ref: '#/definitions/book.BookDTO'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  book.BooksResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/book.BookDTO'
+        type: array
+      message:
+        type: string
+      success:
+        type: boolean
+      total:
+        type: integer
+    type: object
+  book.CreateBookRequest:
+    properties:
+      author:
+        type: string
+      description:
+        type: string
+      isbn:
+        type: string
+      pages:
+        type: integer
+      published_year:
+        type: integer
+      publisher:
+        type: string
+      title:
+        type: string
+    required:
+    - author
+    - title
+    type: object
+  book.UpdateBookRequest:
+    properties:
+      author:
+        type: string
+      description:
+        type: string
+      isbn:
+        type: string
+      pages:
+        type: integer
+      published_year:
+        type: integer
+      publisher:
+        type: string
+      title:
+        type: string
+    required:
+    - author
+    - title
+    type: object
   user.AuthResponse:
     properties:
       message:
@@ -247,6 +332,174 @@ paths:
       summary: Register a new user
       tags:
       - users
+  /books:
+    get:
+      consumes:
+      - application/json
+      description: Get books with pagination support and optional author search
+      parameters:
+      - default: 1
+        description: Page number (1-based)
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page (max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by author name
+        in: query
+        name: author
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/book.BooksResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/book.BooksResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/book.BooksResponse'
+      security:
+      - BearerAuth: []
+      summary: Get books with pagination and search
+      tags:
+      - books
+    post:
+      consumes:
+      - application/json
+      description: Create a new book entry
+      parameters:
+      - description: Book creation data
+        in: body
+        name: book
+        required: true
+        schema:
+          $ref: '#/definitions/book.CreateBookRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+      summary: Create a new book
+      tags:
+      - books
+  /books/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a book by its ID
+      parameters:
+      - description: Book ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete book
+      tags:
+      - books
+    get:
+      consumes:
+      - application/json
+      description: Get a book by its ID
+      parameters:
+      - description: Book ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+      summary: Get book by ID
+      tags:
+      - books
+    put:
+      consumes:
+      - application/json
+      description: Update a book's information
+      parameters:
+      - description: Book ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Book update data
+        in: body
+        name: book
+        required: true
+        schema:
+          $ref: '#/definitions/book.UpdateBookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/book.BookResponse'
+      security:
+      - BearerAuth: []
+      summary: Update book
+      tags:
+      - books
 schemes:
 - http
 securityDefinitions:

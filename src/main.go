@@ -9,6 +9,7 @@ import (
 
 	"github.com/ariesmaulana/api-kit/config"
 	"github.com/ariesmaulana/api-kit/database"
+	"github.com/ariesmaulana/api-kit/src/app/book"
 	"github.com/ariesmaulana/api-kit/src/app/user"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -60,6 +61,14 @@ func main() {
 		return c.String(http.StatusOK, "alive")
 	})
 
+	e.GET("/ping", func(c echo.Context) error {
+		return c.String(http.StatusOK, "pong")
+	})
+
+	e.GET("/echo", func(c echo.Context) error {
+		return c.String(http.StatusOK, "echo")
+	})
+
 	// Initialize user app with JWT
 
 	jwtConfig := user.JWTConfig{
@@ -76,6 +85,12 @@ func main() {
 	jwtService := user.NewJWTService(jwtConfig)
 	userHandler := user.NewHandler(userService, jwtService)
 	userHandler.RegisterRoutes(e)
+
+	// Initialize book app
+	bookStorage := book.NewStorage(db.Pool)
+	bookService := book.NewService(bookStorage)
+	bookHandler := book.NewHandler(bookService, jwtService)
+	bookHandler.RegisterRoutes(e)
 
 	// Configure server with timeouts to prevent slow clients from consuming resources
 	server := &http.Server{

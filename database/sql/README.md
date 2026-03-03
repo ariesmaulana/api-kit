@@ -20,4 +20,5 @@ suite, err := testsuite.NewSuite(cfg, "todo.sql", "user.sql")
 
 ## Available SQL Files
 
-- `todo.sql` - Creates the todos table
+- `users.sql` - Creates the users table
+- `books.sql` - Creates the books table
