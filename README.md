@@ -10,47 +10,54 @@ A REST API starter kit built with Go, Echo framework, and PostgreSQL.
 - Zerolog (structured logging)
 - Swagger (API documentation)
 
-
 ## Prerequisites
 
 - Go 1.23.4 or higher
-- PostgreSQL database
-- Environment variables configured (see `.env`)
+- PostgreSQL 12 or higher
+- Make (for Makefile commands)
 
-## Installation
+## Quick Start
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd api-kit
-
 # Install dependencies
-go mod download
+make install-deps
 
-# Set up database
+# Copy and configure environment variables
+cp .env.example .env
+# Edit .env with your database credentials
+
+# Set up database tables
 psql -U <username> -d <database> -f database/sql/users.sql
+psql -U <username> -d <database> -f database/sql/books.sql
+
+# Optional: Add seed data
+psql -U <username> -d <database> -f database/sql/seed_data.sql
+
+# Run the application
+make run
 ```
 
-## Configuration
+Server starts on `http://localhost:8181` (or configured PORT).
 
-Create a `.env` file in the project root with the following variables:
+## Building
 
-```env
-PORT=8080
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=your_user
-DB_PASSWORD=your_password
-DB_NAME=your_database
-```
+For comprehensive build instructions, deployment guides, and troubleshooting, see **[BUILD.md](./BUILD.md)**.
 
-## Running
+Quick build commands:
 
 ```bash
-# Run the application
-go run src/main.go
+# Build for current OS
+make build
 
-# Server starts on localhost:8080 (or configured PORT)
+# Build for Linux
+make build-linux
+
+# Build with tests
+./build.sh --test
+
+# See all build options
+make help
+./build.sh --help
 ```
 
 ## API Endpoints
@@ -81,25 +88,22 @@ The generated files will be placed in the `docs/` directory.
 
 ## Testing
 
-### Setting Up Test Database
-
-1. Create a test database in PostgreSQL:
-
-```sql
-CREATE DATABASE go_test_your_app;
-GRANT ALL PRIVILEGES ON DATABASE go_test_your_app TO postgres;
-```
-
-2. Update test configuration in `testing/config.go` if needed (defaults: localhost:5432, user: postgres, db: go_test_your_app)
-
-3. Run tests:
-
 ```bash
 # Run all tests
-go test -v ./... -count=1
+make test
+
+# Run with verbose output
+make test-verbose
+
+# Run with coverage report
+make test-coverage
 ```
 
-The testing suite provides database-isolated test execution with automatic schema creation and cleanup. See `testing/README.md` for detailed documentation.
+The testing suite provides database-isolated test execution with automatic schema creation and cleanup. 
+
+For detailed testing setup and documentation, see:
+- **[BUILD.md](./BUILD.md#testing)** - Test setup and configuration
+- **[testing/README.md](./testing/README.md)** - Testing framework documentation
 
 ## Project Structure
 

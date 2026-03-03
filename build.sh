@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-APP_NAME="expend"
+APP_NAME="api-kit"
 MAIN_PATH="src/main.go"
 BUILD_DIR="bin"
 VERSION="${VERSION:-dev}"
@@ -83,27 +83,27 @@ build_for_os() {
     local os=$1
     local arch=$2
     local output_name="${BUILD_DIR}/${APP_NAME}-${os}-${arch}"
-    
+
     log_info "Building for ${os}/${arch}..."
-    
+
     mkdir -p "${BUILD_DIR}"
-    
+
     GOOS=${os} GOARCH=${arch} go build \
         -ldflags "-s -w -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME}" \
         -o "${output_name}" \
         "${MAIN_PATH}"
-    
+
     if [ $? -eq 0 ]; then
         log_info "Build successful: ${output_name}"
-        
+
         # Make executable
         chmod +x "${output_name}"
-        
+
         # Show file info
         if command -v file &> /dev/null; then
             file "${output_name}"
         fi
-        
+
         # Show size
         if [ -f "${output_name}" ]; then
             size=$(du -h "${output_name}" | cut -f1)
