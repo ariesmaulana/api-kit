@@ -32,12 +32,12 @@ func (h *Handler) RegisterRoutes(e *echo.Echo) {
 	g.POST("", h.CreateBook)
 	g.GET("/:id", h.GetBookById)
 	g.GET("", h.GetBooks)
+	g.PUT("/:id", h.UpdateBook)
+	g.DELETE("/:id", h.DeleteBook)
 
 	// Protected routes (requires authentication)
 	protected := g.Group("")
 	protected.Use(h.jwtService.JWTMiddleware())
-	protected.PUT("/:id", h.UpdateBook)
-	protected.DELETE("/:id", h.DeleteBook)
 }
 
 // HTTP Request/Response structs
