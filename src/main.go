@@ -66,7 +66,11 @@ func main() {
 	})
 
 	e.POST("/echo", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]bool{"success": true})
+		var body interface{}
+		if err := c.Bind(&body); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		}
+		return c.JSON(http.StatusOK, body)
 	})
 
 	// Initialize user app with JWT
