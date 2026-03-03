@@ -311,15 +311,9 @@ func (h *Handler) UpdateBook(c echo.Context) error {
 	}
 
 	output := h.service.UpdateBook(c.Request().Context(), &UpdateBookInput{
-		TraceId:       traceID,
-		Id:            id,
-		Title:         req.Title,
-		Author:        req.Author,
-		ISBN:          req.ISBN,
-		Publisher:     req.Publisher,
-		PublishedYear: req.PublishedYear,
-		Pages:         req.Pages,
-		Description:   req.Description,
+		TraceId: traceID,
+		Id:      id,
+		Title:   req.Title,
 	})
 
 	if !output.Success {

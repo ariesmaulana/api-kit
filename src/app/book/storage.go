@@ -75,7 +75,7 @@ func (st *storageTx) GetBookById(ctx context.Context, id int) (Book, error) {
 func (st *storageTx) GetBooks(ctx context.Context, limit, offset int, author string) ([]Book, error) {
 	var query string
 	var args []interface{}
-	
+
 	if author != "" {
 		// Search by author (case-insensitive)
 		query = `SELECT id, title, author, isbn, publisher, published_year, pages, description, created_at, updated_at 
@@ -92,7 +92,7 @@ func (st *storageTx) GetBooks(ctx context.Context, limit, offset int, author str
 		         LIMIT $1 OFFSET $2`
 		args = []interface{}{limit, offset}
 	}
-	
+
 	rows, err := st.tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get books: %w", err)
@@ -116,9 +116,9 @@ func (st *storageTx) GetBooks(ctx context.Context, limit, offset int, author str
 	return books, nil
 }
 
-func (st *storageTx) UpdateBook(ctx context.Context, id int, title, author, isbn, publisher string, publishedYear, pages int, description string) error {
-	query := `UPDATE books SET title = $1, author = $2, isbn = $3, publisher = $4, published_year = $5, pages = $6, description = $7, updated_at = NOW() WHERE id = $8`
-	_, err := st.tx.Exec(ctx, query, title, author, isbn, publisher, publishedYear, pages, description, id)
+func (st *storageTx) UpdateBook(ctx context.Context, id int, title string) error {
+	query := `UPDATE books SET title = $1, updated_at = NOW() WHERE id = $2`
+	_, err := st.tx.Exec(ctx, query, title, id)
 	if err != nil {
 		return fmt.Errorf("failed to update book: %w", err)
 	}

@@ -189,7 +189,7 @@ func TestStorageUpdateBook(t *testing.T) {
 				assert.Nil(t, err)
 				defer tx.Rollback()
 
-				err = tx.UpdateBook(ctx, existingBook.Id, "New Title", "New Author", "978-9999999999", "New Publisher", 2024, 400, "New description")
+				err = tx.UpdateBook(ctx, existingBook.Id, "New Title")
 				assert.Nil(t, err)
 
 				err = tx.Commit()
@@ -197,11 +197,6 @@ func TestStorageUpdateBook(t *testing.T) {
 
 				updatedBook := app.Helper.GetBookById(ctx, t, existingBook.Id)
 				assert.Equal(t, "New Title", updatedBook.Title)
-				assert.Equal(t, "New Author", updatedBook.Author)
-				assert.Equal(t, "New Publisher", updatedBook.Publisher)
-				assert.Equal(t, 2024, updatedBook.PublishedYear)
-				assert.Equal(t, 400, updatedBook.Pages)
-				assert.Equal(t, "New description", updatedBook.Description)
 			})
 
 			// Note: PostgreSQL UPDATE doesn't error on 0 rows affected

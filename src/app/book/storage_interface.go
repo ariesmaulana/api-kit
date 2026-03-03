@@ -30,8 +30,8 @@ type StorageTx interface {
 	// GetBooks retrieves books with pagination and optional author filter
 	GetBooks(ctx context.Context, limit, offset int, author string) ([]Book, error)
 
-	// UpdateBook updates a book's information
-	UpdateBook(ctx context.Context, id int, title, author, isbn, publisher string, publishedYear, pages int, description string) error
+	// UpdateBook updates a book's title
+	UpdateBook(ctx context.Context, id int, title string) error
 
 	// DeleteBook deletes a book by ID
 	DeleteBook(ctx context.Context, id int) error

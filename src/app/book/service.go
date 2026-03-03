@@ -184,12 +184,6 @@ func (s *service) UpdateBook(ctx context.Context, input *UpdateBookInput) *Updat
 		return resp
 	}
 
-	if input.Author == "" {
-		log.Warn().Msg("Author empty")
-		resp.Message = "Author is mandatory"
-		return resp
-	}
-
 	// Begin transaction
 	db, err := s.storage.BeginTx(ctx)
 	if err != nil {
@@ -212,7 +206,7 @@ func (s *service) UpdateBook(ctx context.Context, input *UpdateBookInput) *Updat
 	}
 
 	// Update book
-	err = db.UpdateBook(ctx, input.Id, input.Title, input.Author, input.ISBN, input.Publisher, input.PublishedYear, input.Pages, input.Description)
+	err = db.UpdateBook(ctx, input.Id, input.Title)
 	if err != nil {
 		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to update book")
 		resp.Message = "Failed to update book"

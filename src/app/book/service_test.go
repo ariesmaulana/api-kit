@@ -162,9 +162,9 @@ func TestBookCreate(t *testing.T) {
 					{
 						name: "Should fail when ISBN is duplicate",
 						input: &input{
-							title:  "Duplicate ISBN Book",
-							author: "Another Author",
-							isbn:   "978-0134190440", // Same as first book
+							title:     "Duplicate ISBN Book",
+							author:    "Another Author",
+							isbn:      "978-0134190440", // Same as first book
 							publisher: "Different Publisher",
 						},
 						expected: &expected{
@@ -685,12 +685,14 @@ func TestBookUpdate(t *testing.T) {
 				assert.Equal(t, len(initialBooks), len(afterBooks), r.name)
 				assert.NotZero(t, output.Book.Id, r.name)
 				assert.Equal(t, r.input.title, output.Book.Title, r.name)
-				assert.Equal(t, r.input.author, output.Book.Author, r.name)
-				assert.Equal(t, r.input.isbn, output.Book.ISBN, r.name)
-				assert.Equal(t, r.input.publisher, output.Book.Publisher, r.name)
-				assert.Equal(t, r.input.publishedYear, output.Book.PublishedYear, r.name)
-				assert.Equal(t, r.input.pages, output.Book.Pages, r.name)
-				assert.Equal(t, r.input.description, output.Book.Description, r.name)
+				// Other fields should remain unchanged from the original book
+				originalBook := Books[0]
+				assert.Equal(t, originalBook.Author, output.Book.Author, r.name)
+				assert.Equal(t, originalBook.ISBN, output.Book.ISBN, r.name)
+				assert.Equal(t, originalBook.Publisher, output.Book.Publisher, r.name)
+				assert.Equal(t, originalBook.PublishedYear, output.Book.PublishedYear, r.name)
+				assert.Equal(t, originalBook.Pages, output.Book.Pages, r.name)
+				assert.Equal(t, originalBook.Description, output.Book.Description, r.name)
 				assert.NotZero(t, output.Book.CreatedAt, r.name)
 				assert.NotZero(t, output.Book.UpdatedAt, r.name)
 
@@ -712,14 +714,8 @@ func TestBookUpdate(t *testing.T) {
 					{
 						name: "Should update book successfully",
 						input: &input{
-							bookID:        Books[0].Id,
-							title:         "Updated Title",
-							author:        "Updated Author",
-							isbn:          "978-4444444441",
-							publisher:     "Updated Publisher",
-							publishedYear: 2024,
-							pages:         400,
-							description:   "Updated description",
+							bookID: Books[0].Id,
+							title:  "Updated Title",
 						},
 						expected: &expected{
 							success: true,
@@ -727,16 +723,10 @@ func TestBookUpdate(t *testing.T) {
 						},
 					},
 					{
-						name: "Should update only title and author",
+						name: "Should update only title",
 						input: &input{
-							bookID:        Books[0].Id,
-							title:         "New Title",
-							author:        "New Author",
-							isbn:          "978-4444444441",
-							publisher:     "Updated Publisher",
-							publishedYear: 2024,
-							pages:         400,
-							description:   "Updated description",
+							bookID: Books[0].Id,
+							title:  "New Title",
 						},
 						expected: &expected{
 							success: true,
@@ -755,20 +745,6 @@ func TestBookUpdate(t *testing.T) {
 						expected: &expected{
 							success: false,
 							message: "Title is mandatory",
-						},
-					},
-
-					// ===== Validation Tests: Author =====
-					{
-						name: "Should fail when author is empty",
-						input: &input{
-							bookID: Books[0].Id,
-							title:  "Title",
-							author: "",
-						},
-						expected: &expected{
-							success: false,
-							message: "Author is mandatory",
 						},
 					},
 
