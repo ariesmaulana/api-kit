@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"os"
 	"os/signal"
@@ -66,11 +67,11 @@ func main() {
 	})
 
 	e.POST("/echo", func(c echo.Context) error {
-		var body interface{}
+		var body json.RawMessage
 		if err := c.Bind(&body); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		}
-		return c.JSON(http.StatusOK, body)
+		return c.JSONBlob(http.StatusOK, body)
 	})
 
 	// Initialize user app with JWT
