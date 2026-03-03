@@ -31,11 +31,11 @@ func (h *Handler) RegisterRoutes(e *echo.Echo) {
 	// Public routes
 	g.POST("", h.CreateBook)
 	g.GET("/:id", h.GetBookById)
+	g.GET("", h.GetBooks)
 
 	// Protected routes (requires authentication)
 	protected := g.Group("")
 	protected.Use(h.jwtService.JWTMiddleware())
-	protected.GET("", h.GetBooks)
 	protected.PUT("/:id", h.UpdateBook)
 	protected.DELETE("/:id", h.DeleteBook)
 }
@@ -109,6 +109,9 @@ func toBookDTO(book Book) BookDTO {
 }
 
 func toBooksDTO(books []Book) []BookDTO {
+	if len(books) == 0 {
+		return []BookDTO{} // Return empty array instead of nil
+	}
 	dtos := make([]BookDTO, len(books))
 	for i, book := range books {
 		dtos[i] = toBookDTO(book)
@@ -123,7 +126,7 @@ func toBooksDTO(books []Book) []BookDTO {
 // @Accept json
 // @Produce json
 // @Param book body CreateBookRequest true "Book creation data"
-// @Success 201 {object} BookResponse
+// @Success 201 {object} BookDTO
 // @Failure 400 {object} BookResponse
 // @Router /books [post]
 func (h *Handler) CreateBook(c echo.Context) error {
@@ -170,12 +173,9 @@ func (h *Handler) CreateBook(c echo.Context) error {
 		})
 	}
 
+	// Return the book with ID directly
 	dto := toBookDTO(output.Book)
-	return c.JSON(http.StatusCreated, BookResponse{
-		Success: true,
-		Message: "Book created successfully",
-		Data:    &dto,
-	})
+	return c.JSON(http.StatusCreated, dto)
 }
 
 // GetBookById handles GET /books/:id
@@ -235,7 +235,7 @@ func (h *Handler) GetBookById(c echo.Context) error {
 // @Param page query int false "Page number (1-based)" default(1)
 // @Param limit query int false "Items per page (max 100)" default(10)
 // @Param author query string false "Filter by author name"
-// @Success 200 {object} BooksResponse
+// @Success 200 {array} BookDTO
 // @Failure 401 {object} BooksResponse
 // @Failure 500 {object} BooksResponse
 // @Router /books [get]
@@ -275,13 +275,9 @@ func (h *Handler) GetBooks(c echo.Context) error {
 		})
 	}
 
+	// Return array directly
 	dtos := toBooksDTO(output.Books)
-	return c.JSON(http.StatusOK, BooksResponse{
-		Success: true,
-		Message: output.Message,
-		Data:    dtos,
-		Total:   output.Total,
-	})
+	return c.JSON(http.StatusOK, dtos)
 }
 
 // UpdateBook handles PUT /books/:id
