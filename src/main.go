@@ -62,11 +62,11 @@ func main() {
 	})
 
 	e.GET("/ping", func(c echo.Context) error {
-		return c.String(http.StatusOK, "pong")
+		return c.JSON(http.StatusOK, map[string]bool{"success": true})
 	})
 
 	e.GET("/echo", func(c echo.Context) error {
-		return c.String(http.StatusOK, "echo")
+		return c.JSON(http.StatusOK, map[string]bool{"success": true})
 	})
 
 	// Initialize user app with JWT
