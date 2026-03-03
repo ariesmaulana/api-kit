@@ -218,9 +218,7 @@ func (h *Handler) GetBookById(c echo.Context) error {
 	}
 
 	dto := toBookDTO(output.Book)
-	return c.JSON(http.StatusOK, BookResponse{
-		Data: &dto,
-	})
+	return c.JSON(http.StatusOK, dto)
 }
 
 // GetBooks handles GET /books
