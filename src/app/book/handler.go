@@ -87,10 +87,10 @@ type BookResponse struct {
 
 // BooksResponse represents the HTTP response for multiple books operations
 type BooksResponse struct {
-	Success bool       `json:"success"`
-	Message string     `json:"message"`
-	Data    []BookDTO  `json:"data,omitempty"`
-	Total   int        `json:"total,omitempty"`
+	Success bool      `json:"success"`
+	Message string    `json:"message"`
+	Data    []BookDTO `json:"data,omitempty"`
+	Total   int       `json:"total,omitempty"`
 }
 
 func toBookDTO(book Book) BookDTO {
@@ -219,9 +219,7 @@ func (h *Handler) GetBookById(c echo.Context) error {
 
 	dto := toBookDTO(output.Book)
 	return c.JSON(http.StatusOK, BookResponse{
-		Success: true,
-		Message: output.Message,
-		Data:    &dto,
+		Data: &dto,
 	})
 }
 
