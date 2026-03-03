@@ -65,7 +65,7 @@ func main() {
 		return c.JSON(http.StatusOK, map[string]bool{"success": true})
 	})
 
-	e.GET("/echo", func(c echo.Context) error {
+	e.POST("/echo", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]bool{"success": true})
 	})
 
