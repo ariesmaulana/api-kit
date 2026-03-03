@@ -1,0 +1,393 @@
+package user
+
+import (
+	"context"
+
+	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/bcrypt"
+)
+
+// Compile-time check to ensure service implements Service interface
+var _ Service = (*service)(nil)
+
+// service implements the Service interface
+type service struct {
+	storage Storage
+}
+
+// NewService creates a new user service instance
+func NewService(storage Storage) Service {
+	return &service{
+		storage: storage,
+	}
+}
+
+// Register creates a new user account
+func (s *service) Register(ctx context.Context, input *RegisterInput) *RegisterOutput {
+	resp := &RegisterOutput{TraceId: input.TraceId}
+
+	if input.Username == "" {
+		log.Warn().Msg("Username empty")
+		resp.Message = "Username is mandatory"
+		return resp
+	}
+
+	if len(input.Username) < 5 {
+		log.Warn().Msg("Username too short")
+		resp.Message = "Username must be at least 5 characters long"
+		return resp
+	}
+	if input.Email == "" {
+		log.Warn().Msg("Email empty")
+		resp.Message = "Email is mandatory"
+		return resp
+	}
+
+	err := validateEmail(input.Email)
+	if err != nil {
+		log.Warn().Msg("Invalid email")
+		resp.Message = "Invalid email"
+		return resp
+	}
+
+	if input.Password == "" {
+		log.Warn().Msg("Password empty")
+		resp.Message = "Password is mandatory"
+		return resp
+	}
+
+	if len(input.Password) < 7 {
+		log.Warn().Msg("Password too short")
+		resp.Message = "Password must be at least 7 characters long"
+		return resp
+	}
+
+	if input.FullName == "" {
+		log.Warn().Msg("FullName empty")
+		resp.Message = "FullName is mandatory"
+		return resp
+	}
+
+	db, err := s.storage.BeginTx(ctx)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to begin transaction")
+		return resp
+	}
+	defer db.Rollback()
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("failed to hash password")
+		return resp
+	}
+
+	insertedId, errType, err := db.InsertUser(ctx, input.Username, input.Email, input.FullName, string(hashedPassword))
+	if err != nil {
+		if errType == ErrTypeUniqueConstraint {
+			log.Err(err).Str("traceId", input.TraceId).Msg("failed to insert user")
+			resp.Message = "Username or email already exists"
+			return resp
+		}
+		log.Err(err).Str("traceId", input.TraceId).Msg("failed to insert user")
+		return resp
+	}
+
+	data, err := db.GetUserById(ctx, insertedId)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("failed to get user")
+		return resp
+	}
+
+	err = db.Commit()
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("failed to commit")
+		return resp
+	}
+
+	log.Info().
+		Str("traceId", input.TraceId).
+		Str("username", input.Username).
+		Str("email", input.Email).
+		Msg("User registered successfully")
+
+	resp.Success = true
+	resp.Message = "User registered successfully"
+	resp.User = data
+	return resp
+}
+
+// Login authenticates a user
+func (s *service) Login(ctx context.Context, input *LoginInput) *LoginOutput {
+	resp := &LoginOutput{TraceId: input.TraceId}
+
+	// Validate input
+	if input.Username == "" {
+		log.Warn().Msg("Username empty")
+		resp.Message = "Username is mandatory"
+		return resp
+	}
+
+	if input.Password == "" {
+		log.Warn().Msg("Password empty")
+		resp.Message = "Password is mandatory"
+		return resp
+	}
+
+	// Begin transaction
+	db, err := s.storage.BeginTx(ctx)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to begin transaction")
+		return resp
+	}
+	defer db.Rollback()
+
+	// Get user by username
+	user, err := db.GetUserByUsername(ctx, input.Username)
+	if err != nil {
+		log.Info().
+			Str("traceId", input.TraceId).
+			Str("username", input.Username).
+			Msg("User not found")
+		resp.Message = "Invalid username or password"
+		return resp
+	}
+
+	// Get stored password
+	storedPassword, err := db.GetUserPassword(ctx, user.Id)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to get user password")
+		resp.Message = "Invalid username or password"
+		return resp
+	}
+
+	// Verify password
+	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(input.Password))
+	if err != nil {
+		log.Info().
+			Str("traceId", input.TraceId).
+			Str("username", input.Username).
+			Msg("Invalid password attempt")
+		resp.Message = "Invalid username or password"
+		return resp
+	}
+
+	log.Info().
+		Str("traceId", input.TraceId).
+		Str("username", input.Username).
+		Msg("User logged in successfully")
+
+	resp.Success = true
+	resp.Message = "Login successful"
+	resp.User = user
+
+	return resp
+}
+
+// UpdateUsername updates a user's username
+func (s *service) UpdateUsername(ctx context.Context, input *UpdateUsernameInput) *UpdateUsernameOutput {
+	resp := &UpdateUsernameOutput{TraceId: input.TraceId}
+
+	// Validate input
+	if input.NewUsername == "" {
+		log.Warn().Msg("New username empty")
+		resp.Message = "New username is mandatory"
+		return resp
+	}
+
+	if len(input.NewUsername) < 5 {
+		log.Warn().Msg("New username too short")
+		resp.Message = "Username must be at least 5 characters long"
+		return resp
+	}
+
+	// Begin transaction
+	db, err := s.storage.BeginTx(ctx)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to begin transaction")
+		return resp
+	}
+	defer db.Rollback()
+
+	// Lock user row for update (pessimistic lock)
+	_, errType, err := db.LockUserById(ctx, input.Id)
+	if err != nil {
+		if errType == ErrTypeNotFound {
+			log.Err(err).Str("traceId", input.TraceId).Msg("User not found")
+			resp.Message = "No Username Found"
+			return resp
+		}
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to lock user")
+		resp.Message = "Failed to update username"
+		return resp
+	}
+
+	// Update username
+	err = db.UpdateUsername(ctx, input.Id, input.NewUsername)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to update username")
+		resp.Message = "Failed to update username"
+		return resp
+	}
+
+	// Get updated user
+	data, err := db.GetUserById(ctx, input.Id)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to get user")
+		resp.Message = "No Username Found"
+		return resp
+	}
+
+	// Commit transaction
+	err = db.Commit()
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to commit")
+		resp.Message = "Failed to update username"
+		return resp
+	}
+
+	log.Info().
+		Str("traceId", input.TraceId).
+		Int("id", input.Id).
+		Str("newUsername", input.NewUsername).
+		Msg("Username updated successfully")
+
+	resp.Success = true
+	resp.Message = "Username updated successfully"
+	resp.User = data
+
+	return resp
+}
+
+// UpdatePassword updates a user's password
+func (s *service) UpdatePassword(ctx context.Context, input *UpdatePasswordInput) *UpdatePasswordOutput {
+	resp := &UpdatePasswordOutput{TraceId: input.TraceId}
+
+	// Validate input
+	if input.OldPassword == "" {
+		log.Warn().Msg("Old password empty")
+		resp.Message = "Old password is mandatory"
+		return resp
+	}
+
+	if input.NewPassword == "" {
+		log.Warn().Msg("New password empty")
+		resp.Message = "New password is mandatory"
+		return resp
+	}
+
+	if len(input.NewPassword) < 7 {
+		log.Warn().Msg("New password too short")
+		resp.Message = "Password must be at least 7 characters long"
+		return resp
+	}
+
+	// Begin transaction
+	db, err := s.storage.BeginTx(ctx)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to begin transaction")
+		return resp
+	}
+	defer db.Rollback()
+
+	// Lock user row for update (pessimistic lock)
+	_, errType, err := db.LockUserById(ctx, input.Id)
+	if err != nil {
+		if errType == ErrTypeNotFound {
+			log.Err(err).Str("traceId", input.TraceId).Msg("User not found")
+			resp.Message = "User not found"
+			return resp
+		}
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to lock user")
+		resp.Message = "Failed to update password"
+		return resp
+	}
+
+	// Get stored password
+	storedPassword, err := db.GetUserPassword(ctx, input.Id)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to get user password")
+		resp.Message = "User not found"
+		return resp
+	}
+
+	// Verify old password
+	err = bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(input.OldPassword))
+	if err != nil {
+		log.Info().
+			Str("traceId", input.TraceId).
+			Int("id", input.Id).
+			Msg("Invalid old password attempt")
+		resp.Message = "Invalid old password"
+		return resp
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to hash new password")
+		resp.Message = "Failed to update password"
+		return resp
+	}
+
+	// Update password
+	err = db.UpdatePassword(ctx, input.Id, string(hashedPassword))
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to update password")
+		resp.Message = err.Error()
+		return resp
+	}
+
+	// Commit transaction
+	err = db.Commit()
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to commit")
+		resp.Message = "Failed to update password"
+		return resp
+	}
+
+	log.Info().
+		Str("traceId", input.TraceId).
+		Int("id", input.Id).
+		Msg("Password updated successfully")
+
+	resp.Success = true
+	resp.Message = "Password updated successfully"
+
+	return resp
+}
+
+// GetProfileById retrieves a user profile by ID
+func (s *service) GetProfileById(ctx context.Context, input *GetProfileByIdInput) *GetProfileByIdOutput {
+	resp := &GetProfileByIdOutput{TraceId: input.TraceId}
+
+	// Begin transaction
+	db, err := s.storage.BeginTx(ctx)
+	if err != nil {
+		log.Err(err).Str("traceId", input.TraceId).Msg("Failed to begin transaction")
+		resp.Message = "Failed to fetch profile"
+		return resp
+	}
+	defer db.Rollback()
+
+	// Get user by ID
+	user, err := db.GetUserById(ctx, input.Id)
+	if err != nil {
+		log.Err(err).
+			Str("traceId", input.TraceId).
+			Int("id", input.Id).
+			Msg("User not found")
+		resp.Message = "User not found"
+		return resp
+	}
+
+	log.Info().
+		Str("traceId", input.TraceId).
+		Int("id", input.Id).
+		Msg("Profile retrieved successfully")
+
+	resp.Success = true
+	resp.Message = "Profile retrieved successfully"
+	resp.User = user
+
+	return resp
+}
